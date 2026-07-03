@@ -1,4 +1,4 @@
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
@@ -13,7 +13,7 @@ RUN npm install --legacy-peer-deps
 RUN npm run build -w frontend
 
 # Serve frontend using a simple static server
-FROM node:20-alpine
+FROM node:20-slim
 WORKDIR /app
 COPY --from=builder /app/frontend/dist ./dist
 RUN npm install -g serve

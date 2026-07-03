@@ -1,0 +1,16 @@
+node_modules/
+dist/
+build/
+.git/
+.github/
+*.log
+.env
+.env.*
+.dockerignore
+Dockerfile
+docker-compose.yml
+README.md
+ARCHITECTURE.md
+DESIGN_DECISIONS.md
+walkthrough.md
+task.md
