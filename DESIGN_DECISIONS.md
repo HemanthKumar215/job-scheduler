@@ -89,3 +89,50 @@ To protect the reliability and correctness of the core execution lifecycle (clai
 1. **Workflow dependencies (DAGs)**: Can be added on top as a parent-child completion trigger.
 2. **Event-driven execution (Webhooks)**: Can be added via an external ingest service.
 3. **AI-generated failure summaries**: A nice-to-have visual addon that doesn't affect scheduler operations.
+
+## 6. CI/CD Gotchas — Do Not Reintroduce
+
+These three bugs were discovered and diagnosed across CI runs #12–#16. Each one passes locally and only fails in the pipeline, making them easy to reintroduce silently.
+
+### Gotcha 1: `prisma migrate dev` vs `prisma migrate deploy`
+
+**Never use `migrate dev` in CI.**
+
+| Command | Behaviour | Use where |
+|---------|-----------|-----------|
+| `migrate dev` | Interactive — prompts for confirmation, can auto-generate new migrations from schema drift | Local development only |
+| `migrate deploy` | Non-interactive — applies committed migration files only, exits with error if schema and migrations disagree | CI, staging, production |
+
+If `migrate deploy` fails in CI it means there is a **committed schema change without a corresponding migration file**. The fix is `prisma migrate dev` locally to generate the migration file, commit it, and push — not reverting to `migrate dev` in CI.
+
+### Gotcha 2: `.env` value quoting
+
+**Do not quote values in shell-written `.env` files.**
+
+```bash
+# ❌ Wrong — DATABASE_URL becomes literally `"postgresql://..."` with quote chars
+echo "DATABASE_URL=\"postgresql://...\"" > .env
+
+# ✅ Correct — raw value, no surrounding quotes
+echo "DATABASE_URL=postgresql://..." > .env
+```
+
+Prisma does not strip surrounding quote characters from `.env` values. The URL `"postgresql://..."` (with literal `"`) is syntactically invalid — Prisma fails to connect silently. The string looks correct when you `cat` it; it only breaks when something parses it.
+
+### Gotcha 3: `.env` file path resolution in a monorepo workspace
+
+**Use workflow-level `env:` variables in CI — never rely on `.env` file discovery across workspace boundaries.**
+
+There are two different `.env` discovery mechanisms in this project:
+
+| Tool | Where it looks for `.env` |
+|------|--------------------------|
+| Prisma CLI (`migrate`, `generate`) | Current working directory (project root when run from root) |
+| `PrismaClient` (in application code / `seed.ts`) | Directory containing `schema.prisma` (`prisma/`) |
+| `dotenv/config` import | `process.cwd()` at time of import |
+
+When `npm run seed -w prisma` runs, it changes directory to `prisma/`. A `.env` at the project root is **not visible** to `PrismaClient` inside `seed.ts` via that path. Options:
+
+1. ✅ **Preferred (CI)**: Set env vars in the GitHub Actions `env:` block at the workflow level — every step inherits them from `process.env` directly, no file discovery needed.
+2. ✅ **Preferred (local dev)**: `import 'dotenv/config'` at the top of `seed.ts` loads from `process.cwd()`.
+3. ❌ **Do not**: Copy `.env` to `prisma/.env` — this causes Prisma CLI to find two `.env` sources and can introduce subtle conflicts with `migrate deploy`.
