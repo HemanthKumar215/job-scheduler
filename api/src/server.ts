@@ -15,6 +15,7 @@ import { authenticateJWT } from './middleware/auth.js'
 import { correlationIdMiddleware } from './middleware/correlation.js'
 import { rateLimiter } from './middleware/rateLimiter.js'
 import { initSocketIO } from './socket.js'
+import { startApiSupervisor } from './supervisor.js'
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
 const app = express()
@@ -22,6 +23,7 @@ const server = http.createServer(app)
 
 // Initializations
 initSocketIO(server)
+startApiSupervisor() // Failover supervisor — runs in API process, survives worker crashes
 
 app.use(cors())
 app.use(express.json())

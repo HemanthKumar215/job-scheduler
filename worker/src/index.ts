@@ -46,18 +46,19 @@ async function sendHeartbeat() {
       activeJobs: activeJobsCount
     }
 
-    await prisma.$transaction([
-      prisma.worker.update({
-        where: { id: workerId },
-        data: { lastHeartbeatAt: new Date() }
-      }),
-      prisma.workerHeartbeat.create({
-        data: {
-          workerId,
-          loadMetrics
-        }
-      })
-    ])
+    // Use upsert so the worker self-heals if the supervisor deleted/marked its record.
+    // Without this, a P2025 "record not found" error silently stops heartbeats
+    // after the first supervisor scavenge cycle, making the worker permanently invisible.
+    const worker = await prisma.worker.upsert({
+      where: { name: WORKER_NAME },
+      update: { lastHeartbeatAt: new Date(), status: 'ACTIVE' },
+      create: { id: workerId, name: WORKER_NAME, status: 'ACTIVE', capacity: CAPACITY }
+    })
+    workerId = worker.id
+
+    await prisma.workerHeartbeat.create({
+      data: { workerId, loadMetrics }
+    })
 
     // Publish to Redis Pub/Sub for dashboard live updates
     const pubClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')

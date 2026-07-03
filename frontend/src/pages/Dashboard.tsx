@@ -184,10 +184,15 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
     }
   }
 
-  // Calculate worker heartbeat strip ticks
+  // Calculate worker heartbeat strip ticks.
+  // Age is the sole determinant of strip color — the strip shows heartbeat recency,
+  // not the backend's DEAD verdict. This means amber (15-30s) always renders when
+  // the heartbeat is in that window, regardless of whether the supervisor has
+  // already fired. The backend status is shown separately in the Worker Registry grid.
+  // Both converge to red/DEAD at >30s — matching the supervisor's timeout exactly.
   const getHeartbeatState = (worker: Worker) => {
     const secondsAgo = (Date.now() - new Date(worker.lastHeartbeatAt).getTime()) / 1000
-    if (worker.status === 'DEAD' || secondsAgo > 30) {
+    if (secondsAgo > 30) {
       return { label: 'DEAD', color: 'bg-red-500', pulse: false }
     }
     if (secondsAgo > 15) {
