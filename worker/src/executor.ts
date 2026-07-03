@@ -1,6 +1,6 @@
 import { prisma, Job, JobStatus, LogLevel, RetryStrategy, ExecutionStatus } from 'db-client'
 import { validateStateTransition } from './stateMachine.js'
-import { parseExpression } from 'cron-parser'
+import parseExpression from 'cron-parser'
 import pino from 'pino'
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' })

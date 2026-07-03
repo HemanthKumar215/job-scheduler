@@ -5,7 +5,7 @@ import { requireOrgRole } from '../middleware/rbac.js'
 import { idempotencyMiddleware } from '../middleware/idempotency.js'
 import { prisma, OrgRole, JobStatus } from 'db-client'
 import { z } from 'zod'
-import { parseExpression } from 'cron-parser'
+import parseExpression from 'cron-parser'
 
 const router = Router()
 
