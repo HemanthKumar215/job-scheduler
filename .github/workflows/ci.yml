@@ -1,0 +1,71 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: job_scheduler
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: password
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm install --legacy-peer-deps
+
+      - name: Create .env Configuration
+        run: |
+          echo "DATABASE_URL=\"postgresql://postgres:password@localhost:5432/job_scheduler?schema=public\"" > .env
+          echo "REDIS_URL=\"redis://localhost:6379\"" >> .env
+          echo "JWT_SECRET=\"super-secret-key-change-it-in-production\"" >> .env
+          echo "PORT=3000" >> .env
+
+      - name: Build Database Client
+        run: npm run build -w prisma
+
+      - name: Run Database Migrations
+        run: npx prisma migrate dev --skip-generate
+
+      - name: Seed Database
+        run: npx tsx prisma/seed.ts
+
+      - name: Run Standard Tests
+        run: npm run test
+
+      - name: Run Concurrency & Failover Proof Tests
+        run: npm run test:proofs

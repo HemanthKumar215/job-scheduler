@@ -1,0 +1,288 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Distributed Job Scheduler API",
+    "version": "1.0.0",
+    "description": "API endpoints for the Distributed Job Scheduler Platform, including Authentication, Organizations, Projects, Queues, and Jobs."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Local API development server"
+    }
+  ],
+  "paths": {
+    "/api/auth/signup": {
+      "post": {
+        "summary": "User Signup",
+        "description": "Registers a new user, automatically creates an Organization, Project, and Default Queue.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password", "firstName", "lastName"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string", "minLength": 6 },
+                  "firstName": { "type": "string" },
+                  "lastName": { "type": "string" },
+                  "orgName": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "user": { "type": "object" },
+                    "organization": { "type": "object" },
+                    "project": { "type": "object" },
+                    "queue": { "type": "object" }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation error" },
+          "409": { "description": "Email already exists" }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "summary": "User Login",
+        "description": "Authenticates a user and returns a JWT token.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["email", "password"],
+                "properties": {
+                  "email": { "type": "string", "format": "email" },
+                  "password": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "token": { "type": "string" },
+                    "user": { "type": "object" },
+                    "memberships": { "type": "array", "items": { "type": "object" } }
+                  }
+                }
+              }
+            }
+          },
+          "400": { "description": "Validation error" },
+          "401": { "description": "Invalid credentials" }
+        }
+      }
+    },
+    "/api/projects": {
+      "get": {
+        "summary": "List Projects",
+        "parameters": [
+          { "name": "orgId", "in": "query", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      },
+      "post": {
+        "summary": "Create Project",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "organizationId"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "organizationId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Project created" }
+        }
+      }
+    },
+    "/api/projects/{projectId}/queues": {
+      "get": {
+        "summary": "List Queues",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      },
+      "post": {
+        "summary": "Create Queue",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["name", "priority", "concurrencyLimit", "retryPolicyId"],
+                "properties": {
+                  "name": { "type": "string" },
+                  "priority": { "type": "integer" },
+                  "concurrencyLimit": { "type": "integer" },
+                  "retryPolicyId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Queue created" }
+        }
+      }
+    },
+    "/api/queues/{queueId}": {
+      "patch": {
+        "summary": "Update Queue Config",
+        "parameters": [
+          { "name": "queueId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "priority": { "type": "integer" },
+                  "concurrencyLimit": { "type": "integer" },
+                  "status": { "type": "string", "enum": ["ACTIVE", "PAUSED"] },
+                  "retryPolicyId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/api/projects/{projectId}/jobs": {
+      "get": {
+        "summary": "List Jobs",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "status", "in": "query", "schema": { "type": "string" } },
+          { "name": "queueId", "in": "query", "schema": { "type": "string" } },
+          { "name": "batchId", "in": "query", "schema": { "type": "string" } },
+          { "name": "correlationId", "in": "query", "schema": { "type": "string" } },
+          { "name": "page", "in": "query", "schema": { "type": "integer", "default": 1 } },
+          { "name": "limit", "in": "query", "schema": { "type": "integer", "default": 20 } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      },
+      "post": {
+        "summary": "Submit Job",
+        "parameters": [
+          { "name": "projectId", "in": "path", "required": true, "schema": { "type": "string" } },
+          { "name": "Idempotency-Key", "in": "header", "schema": { "type": "string" } },
+          { "name": "X-Correlation-ID", "in": "header", "schema": { "type": "string" } }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": ["queueId"],
+                "properties": {
+                  "queueId": { "type": "string" },
+                  "payload": { "type": "object" },
+                  "priority": { "type": "integer" },
+                  "scheduledAt": { "type": "string" },
+                  "cronExpression": { "type": "string" },
+                  "batchId": { "type": "string" }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Job created" }
+        }
+      }
+    },
+    "/api/jobs/{jobId}": {
+      "get": {
+        "summary": "Get Job details",
+        "parameters": [
+          { "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/api/jobs/{jobId}/logs": {
+      "get": {
+        "summary": "Get Job Logs",
+        "parameters": [
+          { "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/api/jobs/{jobId}/retry": {
+      "post": {
+        "summary": "Retry failed/DLQ job",
+        "parameters": [
+          { "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    },
+    "/api/jobs/{jobId}/requeue-dlq": {
+      "post": {
+        "summary": "Requeue DLQ job",
+        "parameters": [
+          { "name": "jobId", "in": "path", "required": true, "schema": { "type": "string" } }
+        ],
+        "responses": {
+          "200": { "description": "Success" }
+        }
+      }
+    }
+  }
+}

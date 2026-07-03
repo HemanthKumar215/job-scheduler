@@ -1,0 +1,137 @@
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import request from 'supertest'
+import { app, server } from '../server.js'
+import { prisma } from 'db-client'
+import Redis from 'ioredis'
+
+const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
+
+describe('API Auth, Projects & Jobs Endpoints', () => {
+  let userToken: string
+  let projectId: string
+  let queueId: string
+
+  beforeAll(async () => {
+    // Clear Redis rate limit keys to avoid blocking test requests
+    const keys = await redis.keys('rate:limiter:*')
+    if (keys.length > 0) {
+      await redis.del(...keys)
+    }
+  })
+
+  afterAll(async () => {
+    // Close servers and database connections
+    await prisma.$disconnect()
+    await redis.quit()
+    server.close()
+  })
+
+  it('should successfully sign up a new user and create defaults', async () => {
+    const uniqueEmail = `test-${Date.now()}@example.com`
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({
+        email: uniqueEmail,
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User',
+        orgName: 'Test Organization'
+      })
+
+    expect(res.status).toBe(201)
+    expect(res.body).toHaveProperty('token')
+    expect(res.body.user.email).toBe(uniqueEmail)
+    expect(res.body).toHaveProperty('project')
+    expect(res.body).toHaveProperty('queue')
+
+    userToken = res.body.token
+    projectId = res.body.project.id
+    queueId = res.body.queue.id
+  })
+
+  it('should fail sign up with duplicate email', async () => {
+    const email = 'owner@example.com' // Seeded user email
+    const res = await request(app)
+      .post('/api/auth/signup')
+      .send({
+        email,
+        password: 'password123',
+        firstName: 'Test',
+        lastName: 'User'
+      })
+
+    expect(res.status).toBe(409)
+    expect(res.body.error.code).toBe('EMAIL_ALREADY_EXISTS')
+  })
+
+  it('should successfully login an existing user', async () => {
+    const res = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'owner@example.com',
+        password: 'password123'
+      })
+
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('token')
+  })
+
+  it('should list projects for authorized user', async () => {
+    const loginRes = await request(app)
+      .post('/api/auth/login')
+      .send({
+        email: 'owner@example.com',
+        password: 'password123'
+      })
+
+    const orgId = loginRes.body.memberships[0].organization.id
+    const token = loginRes.body.token
+
+    const res = await request(app)
+      .get(`/api/projects?orgId=${orgId}`)
+      .set('Authorization', `Bearer ${token}`)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('projects')
+    expect(res.body.projects.length).toBeGreaterThan(0)
+  })
+
+  it('should submit a job with correlation ID and support idempotency', async () => {
+    const idempotencyKey = `idemp-${Date.now()}`
+
+    // 1. First submission (Create Job)
+    const res1 = await request(app)
+      .post(`/api/projects/${projectId}/jobs`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send({
+        queueId,
+        payload: { task: 'test-api-submission', val: 42 }
+      })
+
+    if (res1.status !== 201) {
+      console.log('Failing response body:', JSON.stringify(res1.body, null, 2))
+    }
+    expect(res1.status).toBe(201)
+    expect(res1.body).toHaveProperty('job')
+    expect(res1.body.job.idempotencyKey).toBe(idempotencyKey)
+    expect(res1.body.job.correlationId).toBeDefined()
+    expect(res1.headers['x-correlation-id']).toBe(res1.body.job.correlationId)
+
+    const jobId = res1.body.job.id
+
+    // 2. Second submission with SAME idempotency-key (Cache HIT)
+    const res2 = await request(app)
+      .post(`/api/projects/${projectId}/jobs`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .set('Idempotency-Key', idempotencyKey)
+      .send({
+        queueId,
+        payload: { task: 'test-api-submission', val: 42 }
+      })
+
+    expect(res2.status).toBe(200)
+    expect(res2.body.job.id).toBe(jobId)
+    expect(res2.headers['x-cache-lookup']).toContain('HIT')
+  })
+})
