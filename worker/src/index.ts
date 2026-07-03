@@ -5,6 +5,7 @@ import { runFailoverSupervisor } from './supervisor.js'
 import { randomUUID } from 'crypto'
 import os from 'os'
 import pino from 'pino'
+import Redis from 'ioredis'
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
 
@@ -59,7 +60,7 @@ async function sendHeartbeat() {
     ])
 
     // Publish to Redis Pub/Sub for dashboard live updates
-    const pubClient = new (await import('ioredis')).default(process.env.REDIS_URL || 'redis://localhost:6379')
+    const pubClient = new Redis(process.env.REDIS_URL || 'redis://localhost:6379')
     await pubClient.publish('worker-updates', JSON.stringify({
       workerId,
       name: WORKER_NAME,
