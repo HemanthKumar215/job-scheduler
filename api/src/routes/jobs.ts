@@ -5,7 +5,7 @@ import { requireOrgRole } from '../middleware/rbac.js'
 import { idempotencyMiddleware } from '../middleware/idempotency.js'
 import { prisma, OrgRole, JobStatus } from 'db-client'
 import { z } from 'zod'
-import cronParser from 'cron-parser'
+import { parseExpression } from 'cron-parser'
 
 const router = Router()
 
@@ -56,7 +56,7 @@ router.post(
       // Validate cron expression if provided
       if (body.cronExpression) {
         try {
-          cronParser.parseExpression(body.cronExpression)
+          parseExpression(body.cronExpression)
         } catch (err) {
           return res.status(400).json({
             error: {
@@ -81,7 +81,7 @@ router.post(
         }
       } else if (body.cronExpression) {
         // Scheduled cron job first run
-        const interval = cronParser.parseExpression(body.cronExpression)
+        const interval = parseExpression(body.cronExpression)
         scheduledAt = interval.next().toDate()
       }
 

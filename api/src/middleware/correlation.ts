@@ -1,5 +1,4 @@
 import { Request, Response, NextFunction } from 'express'
-import { crypto } from 'db-client' // Wait, standard crypto is built-in to Node, so we can use import { randomUUID } from 'crypto'
 import { randomUUID } from 'crypto'
 
 export interface RequestWithCorrelation extends Request {

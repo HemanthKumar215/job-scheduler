@@ -45,7 +45,7 @@ export async function idempotencyMiddleware(req: AuthenticatedRequest, res: Resp
     }
 
     // 2. Acquire a short-lived Redis lock to prevent race conditions
-    const acquired = await redis.set(lockKey, 'locked', 'NX', 'PX', 5000) // 5s expiration
+    const acquired = await redis.set(lockKey, 'locked', 'PX', 5000, 'NX') // 5s expiration
     if (!acquired) {
       return res.status(409).json({
         error: {

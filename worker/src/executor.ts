@@ -1,6 +1,6 @@
 import { prisma, Job, JobStatus, LogLevel, RetryStrategy, ExecutionStatus } from 'db-client'
 import { validateStateTransition } from './stateMachine.js'
-import cronParser from 'cron-parser'
+import { parseExpression } from 'cron-parser'
 import pino from 'pino'
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' })
@@ -80,7 +80,7 @@ export async function executeJob(job: Job, workerId: string) {
 
     if (job.cronExpression) {
       // It's a recurring cron job: reschedule the SAME job record to next cron interval
-      const interval = cronParser.parseExpression(job.cronExpression)
+      const interval = parseExpression(job.cronExpression)
       const nextRunAt = interval.next().toDate()
 
       validateStateTransition(JobStatus.RUNNING, JobStatus.QUEUED)
