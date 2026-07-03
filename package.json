@@ -19,7 +19,7 @@
     "dev:worker": "npm run dev -w worker",
     "dev:frontend": "npm run dev -w frontend",
     "test": "vitest run --workspace=vitest.workspace.ts",
-    "test:proofs": "vitest run --workspace=vitest.workspace.ts --project=proofs"
+    "test:proofs": "vitest run worker/src/__tests__/proofs.test.ts"
   },
   "devDependencies": {
     "typescript": "^5.3.3",
