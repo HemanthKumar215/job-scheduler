@@ -6,35 +6,34 @@
 <meta charset="UTF-8">
 <title>Aether Scheduler - Full Technical Documentation</title>
 <style>
-body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.6;color:#1a1a1a;max-width:900px;margin:2.54cm}
-.cover{text-align:center;padding:80px 0 60px;page-break-after:always}
-.cover-title{font-size:28pt;font-weight:700;color:#0d3b66;margin-bottom:8px}
-.cover-sub{font-size:14pt;color:#1e6091;margin-bottom:4px}
-.cover-badge{display:inline-block;background:#0d3b66;color:white;padding:6px 18px;border-radius:4px;font-size:9pt;margin:4px}
-h1{font-size:18pt;color:#0d3b66;border-bottom:3px solid #0d3b66;padding-bottom:6px;margin-top:36pt}
-h2{font-size:14pt;color:#1e6091;margin-top:24pt;border-left:4px solid #1e6091;padding-left:10px}
-h3{font-size:12pt;color:#2e86c1;margin-top:16pt}
-table{border-collapse:collapse;width:100%;margin:14px 0;font-size:10pt}
-th{background:#0d3b66;color:white;padding:8px 12px;text-align:left}
-td{border:1px solid #ccc;padding:7px 12px;vertical-align:top}
+body{font-family:Calibri,Arial,sans-serif;font-size:11pt;line-height:1.3;color:#1a1a1a;max-width:900px}
+.cover{text-align:center;padding:20px 0;page-break-after:always}
+.cover-title{font-size:24pt;font-weight:700;color:#0d3b66;margin-bottom:4px}
+.cover-sub{font-size:12pt;color:#1e6091;margin-bottom:4px}
+.cover-badge{display:inline-block;background:#0d3b66;color:white;padding:4px 10px;border-radius:4px;font-size:9pt;margin:2px}
+h1{font-size:16pt;color:#0d3b66;border-bottom:2px solid #0d3b66;padding-bottom:2px;margin-top:16pt;margin-bottom:8pt;page-break-before:always}
+h2{font-size:13pt;color:#1e6091;margin-top:12pt;margin-bottom:4pt;border-left:3px solid #1e6091;padding-left:6px}
+h3{font-size:11pt;color:#2e86c1;margin-top:8pt;margin-bottom:2pt}
+table{border-collapse:collapse;width:100%;margin:6px 0;font-size:10pt}
+th{background:#0d3b66;color:white;padding:4px 6px;text-align:left}
+td{border:1px solid #ccc;padding:4px 6px;vertical-align:top}
 tr:nth-child(even) td{background:#f0f4f8}
-pre{background:#1e1e2e;color:#cdd6f4;padding:14px 16px;border-radius:6px;font-family:Consolas,monospace;font-size:9pt;margin:10px 0;white-space:pre-wrap;word-wrap:break-word}
-code{background:#e8f0fe;color:#1a237e;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:9.5pt}
+pre{background:#1e1e2e;color:#cdd6f4;padding:8px;border-radius:4px;font-family:Consolas,monospace;font-size:9pt;margin:6px 0;white-space:pre-wrap;word-wrap:break-word}
+code{background:#e8f0fe;color:#1a237e;padding:1px 3px;border-radius:3px;font-family:Consolas,monospace;font-size:9.5pt}
 pre code{background:none;color:inherit;padding:0}
-.callout{border-left:5px solid #1e6091;background:#eaf4fb;padding:10px 14px;margin:12px 0;border-radius:0 4px 4px 0}
+.callout{border-left:4px solid #1e6091;background:#eaf4fb;padding:6px 10px;margin:6px 0;border-radius:0 4px 4px 0}
 .callout.warning{border-color:#e67e22;background:#fef9f0}
 .callout.success{border-color:#27ae60;background:#eafaf1}
-.callout strong{display:block;margin-bottom:4px}
-.page-break{page-break-before:always}
-.endpoint{background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px;padding:10px 14px;margin:10px 0}
-.method{display:inline-block;padding:2px 8px;border-radius:3px;font-weight:700;font-size:9pt;margin-right:8px}
+.callout strong{display:block;margin-bottom:2px}
+.endpoint{background:#f8f9fa;border:1px solid #dee2e6;border-radius:4px;padding:6px 10px;margin:6px 0}
+.method{display:inline-block;padding:2px 6px;border-radius:3px;font-weight:700;font-size:9pt;margin-right:6px}
 .GET{background:#d1ecf1;color:#0c5460}.POST{background:#d4edda;color:#155724}
 .PATCH{background:#fff3cd;color:#856404}.DELETE{background:#f8d7da;color:#721c24}
 .path{font-family:Consolas,monospace;font-size:10pt}
-.desc{font-size:9.5pt;color:#555;margin-top:4px}
-.auth-note{font-size:8.5pt;color:#777;margin-top:4px}
-.diagram-box{border:2px solid #0d3b66;border-radius:8px;padding:20px;background:#f8faff;font-family:Consolas,monospace;font-size:8.5pt;white-space:pre-wrap;word-wrap:break-word;color:#1a1a1a;margin:14px 0}
-ul,ol{margin:8px 0 8px 20px}li{margin-bottom:4px}p{margin:8px 0}
+.desc{font-size:9.5pt;color:#555;margin-top:2px}
+.auth-note{font-size:8.5pt;color:#777;margin-top:2px}
+.diagram-box{border:1px solid #0d3b66;border-radius:4px;padding:10px;background:#f8faff;font-family:Consolas,monospace;font-size:8.5pt;white-space:pre-wrap;word-wrap:break-word;color:#1a1a1a;margin:6px 0}
+ul,ol{margin:4px 0 4px 20px}li{margin-bottom:2px}p{margin:4px 0}
 </style>
 </head>
 <body>
@@ -62,7 +61,7 @@ ul,ol{margin:8px 0 8px 20px}li{margin-bottom:4px}p{margin:8px 0}
   Reliability &amp; Concurrency (15) | Frontend &amp; UX (10) | API Design (5) | Documentation (5) | Testing (5)</div>
 </div>
 
-<div class="page-break">
+<div>
 <h1 style="margin-top:0">Table of Contents</h1>
 <ol>
 <li>Setup Instructions &amp; Quick-Start</li>
@@ -77,7 +76,7 @@ ul,ol{margin:8px 0 8px 20px}li{margin-bottom:4px}p{margin:8px 0}
 </ol>
 </div>
 
-<div class="page-break">
+<div>
 <h1>1. Setup Instructions &amp; Quick-Start</h1>
 <h2>1.1 Prerequisites</h2>
 <table>
@@ -125,7 +124,7 @@ npm run dev:frontend  # Terminal 3: Dashboard (port 5173)</pre>
 └── .github/workflows/        # GitHub Actions CI/CD pipeline</pre>
 </div>
 
-<div class="page-break">
+<div>
 <h1>2. System Architecture</h1>
 <h2>2.1 Overview</h2>
 <p>Aether Scheduler is a production-grade, multi-tenant distributed job scheduling engine built as a monorepo of three independently deployable services (API, Worker, Frontend) backed by PostgreSQL and Redis. It handles high-concurrency job submission, at-least-once execution, configurable retry backoff, dead-letter queuing, and live WebSocket status updates.</p>
@@ -197,7 +196,7 @@ npm run dev:frontend  # Terminal 3: Dashboard (port 5173)</pre>
                                [manual requeue-dlq] -&gt; QUEUED</div>
 </div>
 
-<div class="page-break">
+<div>
 <h1>3. Database Design &amp; ER Diagram</h1>
 <h2>3.1 Design Principles</h2>
 <ul>
@@ -275,7 +274,7 @@ Relationships:
 }</pre>
 </div>
 
-<div class="page-break">
+<div>
 <h1>4. API Documentation</h1>
 <h2>4.1 Base URL &amp; Auth</h2>
 <p>Base: <code>http://localhost:3000/api</code> | Auth: <code>Authorization: Bearer &lt;token&gt;</code> (24h JWT)</p>
@@ -351,7 +350,7 @@ Relationships:
 </table>
 </div>
 
-<div class="page-break">
+<div>
 <h1>5. Design Decisions &amp; Major Trade-offs</h1>
 
 <h2>5.1 Claiming Strategy: SELECT FOR UPDATE SKIP LOCKED</h2>
@@ -410,7 +409,7 @@ Plan: Bitmap Index Scan on idx_worker_heartbeat
 </table>
 </div>
 
-<div class="page-break">
+<div>
 <h1>6. Automated Testing</h1>
 
 <h2>6.1 Test Suite</h2>
@@ -456,7 +455,7 @@ COMPLETED [future-25s]       attempts=1 [was scheduled] (Assigned: Owner User)</
 Idempotency confirmed. Scheduled job executed after delay. User assignment persisted end-to-end.</div>
 </div>
 
-<div class="page-break">
+<div>
 <h1>7. Frontend &amp; UX</h1>
 
 <h2>7.1 Technology Stack</h2>
@@ -509,7 +508,7 @@ Idempotency confirmed. Scheduled job executed after delay. User assignment persi
 </ul>
 </div>
 
-<div class="page-break">
+<div>
 <h1>9. CI/CD Pipeline &amp; Evaluation Summary</h1>
 
 <h2>9.1 GitHub Actions Workflow</h2>
