@@ -61,13 +61,16 @@ jobs:
         run: npm run build -w prisma
 
       - name: Run Database Migrations
-        # Use 'migrate deploy' (not 'migrate dev') for non-interactive CI environments.
-        # 'migrate dev' prompts for confirmation and tries to generate the client;
-        # 'migrate deploy' applies existing migration files directly, which is what CI needs.
-        run: npx prisma migrate deploy
+        # 'migrate deploy' applies committed migration files — no interactive prompts.
+        # Run from the prisma workspace dir so the schema.prisma path resolves correctly.
+        run: npx prisma migrate deploy --schema=prisma/schema.prisma
 
       - name: Seed Database
-        run: npx tsx prisma/seed.ts
+        # Must use the workspace script (npm run seed -w prisma), NOT npx tsx prisma/seed.ts
+        # from root. Reason: tsx and @prisma/client are devDeps of the prisma workspace;
+        # running tsx from root can't resolve them, and relative imports inside seed.ts
+        # (e.g. bcrypt) would also fail. The workspace script runs in the correct cwd.
+        run: npm run seed -w prisma
 
       - name: Run Standard Tests
         run: npm run test
