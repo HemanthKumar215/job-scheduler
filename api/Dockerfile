@@ -1,5 +1,8 @@
 FROM node:20-slim
 
+# Install openssl so Prisma can detect the correct engine target version
+RUN apt-get update && apt-get install -y openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+
 WORKDIR /app
 
 # Copy root workspace configurations
