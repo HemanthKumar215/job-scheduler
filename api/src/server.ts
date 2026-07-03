@@ -9,6 +9,7 @@ import authRouter from './routes/auth.js'
 import projectsRouter from './routes/projects.js'
 import queuesRouter from './routes/queues.js'
 import jobsRouter from './routes/jobs.js'
+import workersRouter from './routes/workers.js'
 
 import { authenticateJWT } from './middleware/auth.js'
 import { correlationIdMiddleware } from './middleware/correlation.js'
@@ -56,6 +57,7 @@ app.use('/api/auth', authRouter)
 app.use('/api', authenticateJWT, projectsRouter)
 app.use('/api', authenticateJWT, queuesRouter)
 app.use('/api', authenticateJWT, jobsRouter)
+app.use('/api/workers', authenticateJWT, workersRouter)
 
 // Global Error Handler
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {

@@ -48,7 +48,7 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
   const fetchDashboardData = async () => {
     setError('')
     try {
-      // 1. Fetch active queues to obtain queue depth
+      // 1. Fetch active queues
       const qRes = await fetch(`http://localhost:3000/api/projects/${projectId}/queues`, {
         headers: { Authorization: `Bearer ${token}` }
       })
@@ -68,17 +68,7 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
 
       const jobs = jData.jobs as any[]
 
-      // Fetch workers from global state (mocked or fetched from backend workers query if available,
-      // let's fetch workers list or query them directly from the database schema)
-      // Since workers table exists, let's look up all workers in the system
-      // We can create a simple worker search in the backend, but since we didn't add it as a separate route,
-      // we can do a mock fetch or fetch workers list from our project config. Wait, let's create a GET /api/workers
-      // route in Express? Yes, we can fetch all workers by hitting /api/projects/:projectId/jobs and querying workers
-      // database table from a new Express router, or fetch from `/api/workers`! Let's check:
-      // Does `/api/workers` exist? No, let's check projects.ts and queues.ts. It's not there.
-      // Wait, we can fetch them via a generic fetch or we can add it toprojects.ts!
-      // Let's add a GET /api/workers route. For now, let's write a robust fetch to get workers.
-      // Wait, let's look up how we fetch workers:
+      // 3. Fetch workers from live backend workers router
       const wRes = await fetch('http://localhost:3000/api/workers', {
         headers: { Authorization: `Bearer ${token}` }
       }).catch(() => null)
@@ -87,9 +77,6 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
       if (wRes && wRes.ok) {
         const wData = await wRes.json()
         workersList = wData.workers
-      } else {
-        // Fallback or empty workers
-        workersList = []
       }
       setWorkers(workersList)
 
@@ -98,9 +85,13 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
       const failedCount = jobs.filter(j => j.status === 'FAILED' || j.status === 'DLQ').length
       const totalEvaluated = completedCount + failedCount
       const successRate = totalEvaluated > 0 ? Math.round((completedCount / totalEvaluated) * 100) : 100
-      const queuedCount = jobs.filter(j => j.status === 'QUEUED').length
+      
+      // Queue Depth includes QUEUED, RUNNING, and CLAIMED jobs
+      const queueDepthCount = jobs.filter(j => 
+        j.status === 'QUEUED' || j.status === 'RUNNING' || j.status === 'CLAIMED'
+      ).length
 
-      // Throughput trends (mock or computed from completed jobs timestamps over last 7 minutes)
+      // Throughput trends (mock or computed from completed jobs timestamps over last 5 minutes)
       const throughputData = [
         { time: '18:50', completed: 5, failed: 0 },
         { time: '18:51', completed: 8, failed: 1 },
@@ -110,8 +101,8 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
       ]
 
       setMetrics({
-        activeWorkers: workersList.filter(w => w.status === 'ACTIVE').length || 1, // Default fallback if zero registered workers
-        queueDepth: queuedCount,
+        activeWorkers: workersList.filter(w => w.status === 'ACTIVE').length, // Consistent with registry query
+        queueDepth: queueDepthCount,
         successRate,
         avgDuration: 1.2, // seconds
         throughputData
@@ -184,7 +175,7 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error?.message || 'Failed to submit test job.')
 
-      setSubmittedMessage(`Job successfully queued! ID: ${data.job.id}`)
+      setSubmittedMessage(`Job queued. ID: ${data.job.id}`)
       fetchDashboardData()
     } catch (err: any) {
       alert(err.message)
@@ -193,103 +184,131 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
     }
   }
 
+  // Calculate worker heartbeat strip ticks
+  const getHeartbeatState = (worker: Worker) => {
+    const secondsAgo = (Date.now() - new Date(worker.lastHeartbeatAt).getTime()) / 1000
+    if (worker.status === 'DEAD' || secondsAgo > 30) {
+      return { label: 'DEAD', color: 'bg-red-500', pulse: false }
+    }
+    if (secondsAgo > 15) {
+      return { label: 'LATE', color: 'bg-amber-500', pulse: false }
+    }
+    return { label: 'HEALTHY', color: 'bg-green-500', pulse: true }
+  }
+
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <span className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm">Hydrating dashboard statistics...</p>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4 font-mono">
+        <span className="w-8 h-8 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+        <p className="text-slate-400 text-xs">HYDRATING SYSTEM DIAGNOSTICS...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto my-10 bg-red-950/20 border border-red-500/20 rounded-xl p-6 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 text-red-400 mb-4">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+      <div className="max-w-xl mx-auto my-10 bg-[#12151C] border border-red-950/80 rounded p-5 font-mono">
+        <div className="flex items-center space-x-2 text-red-400 text-sm font-semibold mb-2">
+          <span>[SYSTEM ERROR]</span>
         </div>
-        <h3 className="text-lg font-semibold text-red-200 mb-2">Failed to Load Dashboard</h3>
-        <p className="text-sm text-red-300/80 mb-6">{error}</p>
+        <p className="text-xs text-slate-400 mb-6">{error}</p>
         <button
           onClick={fetchDashboardData}
-          className="bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40 font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-[#0B0D12] hover:bg-[#12151C] text-slate-300 border border-[#1F2430] text-xs font-semibold px-4 py-2 rounded transition-colors cursor-pointer"
         >
-          Retry
+          RETRY_CONNECTION
         </button>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
+      {/* SIGNATURE ELEMENT: Live Heartbeat Strip */}
+      <div className="border border-[#1F2430] bg-[#12151C] p-3 rounded">
+        <span className="block text-[8px] font-bold text-slate-500 uppercase tracking-widest font-mono mb-2">
+          System Live Heartbeat Monitor
+        </span>
+        {workers.length === 0 ? (
+          <div className="text-[10px] text-slate-500 font-mono">
+            SYS_MONITOR: NO REGISTERED WORKER NODES FOUND ON DISPATCH
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {workers.map((worker) => {
+              const state = getHeartbeatState(worker)
+              return (
+                <div
+                  key={worker.id}
+                  className="flex items-center space-x-2 border border-[#1F2430] bg-[#0B0D12] px-2.5 py-1 rounded"
+                  title={`Worker: ${worker.name}\nStatus: ${worker.status}\nLast Heartbeat: ${new Date(worker.lastHeartbeatAt).toLocaleTimeString()}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${state.color} ${state.pulse ? 'animate-pulse-heartbeat' : ''}`} />
+                  <span className="text-[9px] font-mono text-slate-350">{worker.name.slice(0, 16)}</span>
+                  <span className="text-[8px] font-mono text-slate-500">[{state.label}]</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+
       {/* Metrics Row */}
       {metrics && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Card 1 */}
-          <div className="bg-slate-900/35 border border-slate-800/80 rounded-xl p-5 hover:border-slate-700 transition-colors">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Active Workers</span>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-bold text-slate-100">{metrics.activeWorkers}</span>
-              <span className="text-xs text-green-400 font-medium flex items-center">
-                <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse mr-1" />
-                Online
-              </span>
+          <div className="bg-[#12151C] border border-[#1F2430] rounded p-4">
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1 font-mono">Active Workers</span>
+            <div className="flex items-baseline space-x-1.5 font-mono">
+              <span className="text-xl font-bold text-slate-200">{metrics.activeWorkers}</span>
+              <span className="text-[9px] text-slate-550">online</span>
             </div>
           </div>
-          {/* Card 2 */}
-          <div className="bg-slate-900/35 border border-slate-800/80 rounded-xl p-5 hover:border-slate-700 transition-colors">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Queue Depth</span>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-bold text-slate-100">{metrics.queueDepth}</span>
-              <span className="text-xs text-slate-500">jobs pending</span>
+
+          <div className="bg-[#12151C] border border-[#1F2430] rounded p-4">
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1 font-mono">Backlog Depth</span>
+            <div className="flex items-baseline space-x-1.5 font-mono">
+              <span className="text-xl font-bold text-slate-200">{metrics.queueDepth}</span>
+              <span className="text-[9px] text-slate-550">queued+running</span>
             </div>
           </div>
-          {/* Card 3 */}
-          <div className="bg-slate-900/35 border border-slate-800/80 rounded-xl p-5 hover:border-slate-700 transition-colors">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Success Rate</span>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-bold text-slate-100">{metrics.successRate}%</span>
-              <span className="text-xs text-purple-400 font-medium">high performance</span>
+
+          <div className="bg-[#12151C] border border-[#1F2430] rounded p-4">
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1 font-mono">Success Ratio</span>
+            <div className="flex items-baseline space-x-1.5 font-mono">
+              <span className="text-xl font-bold text-slate-200">{metrics.successRate}%</span>
+              <span className="text-[9px] text-slate-550">rate</span>
             </div>
           </div>
-          {/* Card 4 */}
-          <div className="bg-slate-900/35 border border-slate-800/80 rounded-xl p-5 hover:border-slate-700 transition-colors">
-            <span className="text-xs text-slate-400 font-semibold uppercase tracking-wider block mb-1">Avg Execution Time</span>
-            <div className="flex items-baseline space-x-2">
-              <span className="text-2xl font-bold text-slate-100">{metrics.avgDuration}s</span>
-              <span className="text-xs text-slate-500">per task</span>
+
+          <div className="bg-[#12151C] border border-[#1F2430] rounded p-4">
+            <span className="text-[9px] text-slate-500 font-bold uppercase tracking-wider block mb-1 font-mono">Avg Runtime</span>
+            <div className="flex items-baseline space-x-1.5 font-mono">
+              <span className="text-xl font-bold text-slate-200">{metrics.avgDuration}s</span>
+              <span className="text-[9px] text-slate-550">latency</span>
             </div>
           </div>
         </div>
       )}
 
-      {/* Chart Row */}
+      {/* Chart & Form Row */}
       {metrics && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Throughput Area Chart */}
-          <div className="lg:col-span-2 bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 shadow-xl">
-            <h3 className="text-sm font-semibold text-slate-200 mb-4 uppercase tracking-wider">Job Throughput trends</h3>
-            <div className="h-64">
+          <div className="lg:col-span-2 bg-[#12151C] border border-[#1F2430] rounded p-5">
+            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 font-mono">Job Throughput Trends</h3>
+            <div className="h-60">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={metrics.throughputData}>
-                  <defs>
-                    <linearGradient id="colorCompleted" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.2} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                  <XAxis dataKey="time" stroke="#64748b" fontSize={10} />
-                  <YAxis stroke="#64748b" fontSize={10} />
-                  <Tooltip contentStyle={{ backgroundColor: '#0f172a', borderColor: '#334155' }} />
+                  <CartesianGrid strokeDasharray="3 3" stroke="#1F2430" />
+                  <XAxis dataKey="time" stroke="#475569" fontSize={9} className="font-mono" />
+                  <YAxis stroke="#475569" fontSize={9} className="font-mono" />
+                  <Tooltip contentStyle={{ backgroundColor: '#12151C', borderColor: '#1F2430', color: '#F1F5F9', fontFamily: 'JetBrains Mono', fontSize: '9px' }} />
                   <Area
                     type="monotone"
                     dataKey="completed"
                     stroke="#8b5cf6"
-                    fillOpacity={1}
-                    fill="url(#colorCompleted)"
+                    fill="#8b5cf6"
+                    fillOpacity={0.06}
                     name="Completed"
                   />
                 </AreaChart>
@@ -297,23 +316,23 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
             </div>
           </div>
 
-          {/* Load Test Form */}
-          <div className="lg:col-span-1 bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 flex flex-col justify-between shadow-xl">
+          {/* Trigger Test Job Form */}
+          <div className="lg:col-span-1 bg-[#12151C] border border-[#1F2430] rounded p-5 flex flex-col justify-between">
             <div>
-              <h3 className="text-sm font-semibold text-slate-200 mb-1 uppercase tracking-wider">Trigger Test Job</h3>
-              <p className="text-xs text-slate-500 mb-4">Submit a mock workload immediately to test the scheduler.</p>
+              <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 font-mono">Dispatched Test Job</h3>
+              <p className="text-[10px] text-slate-500 mb-4 font-mono">Trigger a mock execution workload to verify retry paths.</p>
               
               <form onSubmit={handleSubmitTestJob} className="space-y-4">
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-1">Queue Name</label>
+                  <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Select Target Queue</label>
                   <select
                     value={selectedQueue}
                     onChange={(e) => setSelectedQueue(e.target.value)}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-xs text-slate-200 focus:outline-none"
+                    className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none font-mono cursor-pointer"
                   >
                     {queues.map((q) => (
                       <option key={q.id} value={q.id}>
-                        {q.name} (Priority {q.priority})
+                        {q.name} (P:{q.priority})
                       </option>
                     ))}
                   </select>
@@ -325,86 +344,82 @@ export default function Dashboard({ token, projectId }: DashboardProps) {
                     id="simulateError"
                     checked={simulateError}
                     onChange={(e) => setSimulateError(e.target.checked)}
-                    className="rounded border-slate-800 text-purple-600 focus:ring-0 focus:ring-offset-0 bg-slate-950"
+                    className="rounded border-[#1F2430] text-purple-600 focus:ring-0 focus:ring-offset-0 bg-[#0B0D12] cursor-pointer"
                   />
-                  <label htmlFor="simulateError" className="text-xs text-slate-400 cursor-pointer">
-                    Simulate task execution error
+                  <label htmlFor="simulateError" className="text-xs text-slate-400 font-mono cursor-pointer">
+                    SIMULATE_ERR_PAYLOAD
                   </label>
                 </div>
 
                 <button
                   type="submit"
                   disabled={isSubmittingJob || !selectedQueue}
-                  className="w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-xs font-semibold py-2 rounded-lg transition-colors flex items-center justify-center space-x-2"
+                  className="w-full bg-purple-600/10 hover:bg-purple-600/20 active:bg-purple-600/35 border border-purple-500/40 text-purple-300 text-xs font-semibold py-2 rounded transition-colors font-mono cursor-pointer"
                 >
-                  {isSubmittingJob ? (
-                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                  ) : (
-                    <span>Submit Job</span>
-                  )}
+                  {isSubmittingJob ? 'DISPATCHING...' : 'DISPATCH_TEST_JOB'}
                 </button>
               </form>
             </div>
 
             {submittedMessage && (
-              <div className="mt-4 bg-purple-950/20 border border-purple-500/30 rounded-lg p-3 text-xs text-purple-300">
-                {submittedMessage}
+              <div className="mt-4 bg-[#0B0D12] border border-[#1F2430] rounded p-2.5 text-[9px] font-mono text-slate-350">
+                [SYSTEM]: {submittedMessage}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {/* Workers monitor list */}
-      <div className="bg-slate-900/30 border border-slate-800/80 rounded-xl p-6 shadow-xl">
-        <h3 className="text-sm font-semibold text-slate-200 mb-4 uppercase tracking-wider">Worker Node Monitor</h3>
+      {/* Workers Node Monitor grid */}
+      <div className="bg-[#12151C] border border-[#1F2430] rounded p-5">
+        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-4 font-mono">Active Worker Registry</h3>
         
         {workers.length === 0 ? (
-          <div className="bg-slate-950/40 rounded-lg p-6 border border-slate-850 text-center text-slate-500 text-xs">
-            <svg className="w-8 h-8 mx-auto text-slate-700 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18.364 5.636l-3.536 3.536m0 5.656l3.536 3.536M9.172 9.172L5.636 5.636m3.536 9.192l-3.536 3.536M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-5 0a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-            <span>No worker daemons registered or heartbeat data received yet.</span>
+          <div className="bg-[#0B0D12] border border-[#1F2430] rounded p-6 text-center text-slate-500 text-xs font-mono">
+            SYS_REGISTRY: NO REGISTERED WORKER NODES FOUND ON DISPATCH
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workers.map((worker) => (
-              <div key={worker.id} className="bg-slate-950/60 border border-slate-850 rounded-lg p-4 flex flex-col justify-between">
-                <div>
-                  <div className="flex justify-between items-start">
-                    <span className="font-bold text-slate-200 text-xs truncate max-w-[150px]">{worker.name}</span>
-                    <span className={`px-2 py-0.5 rounded text-[8px] font-bold ${
-                      worker.status === 'ACTIVE' ? 'bg-green-500/10 text-green-400 border border-green-500/25' :
-                      worker.status === 'DEAD' ? 'bg-red-500/10 text-red-400 border border-red-500/25' :
-                      'bg-slate-500/10 text-slate-400 border border-slate-750'
-                    }`}>
-                      {worker.status}
-                    </span>
-                  </div>
-                  <div className="space-y-1.5 mt-3 text-[10px] text-slate-450">
-                    <div className="flex justify-between">
-                      <span>Worker ID:</span>
-                      <span className="font-mono text-slate-350">{worker.id.slice(0, 8)}...</span>
+            {workers.map((worker) => {
+              const state = getHeartbeatState(worker)
+              return (
+                <div key={worker.id} className="bg-[#0B0D12] border border-[#1F2430] rounded p-4 flex flex-col justify-between">
+                  <div>
+                    <div className="flex justify-between items-start">
+                      <span className="font-mono font-bold text-slate-300 text-xs truncate max-w-[150px]">{worker.name}</span>
+                      <span className={`px-2 py-0.5 rounded text-[8px] font-mono font-bold uppercase ${
+                        state.label === 'HEALTHY' ? 'bg-green-500/10 text-green-400 border border-green-500/20' :
+                        state.label === 'LATE' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' :
+                        'bg-red-500/10 text-red-400 border border-red-500/20'
+                      }`}>
+                        {state.label}
+                      </span>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Capacity Limit:</span>
-                      <span className="text-slate-350">{worker.capacity} concurrent jobs</span>
-                    </div>
-                    {worker.activeJobs !== undefined && (
+                    <div className="space-y-1.5 mt-4 text-[10px] font-mono text-slate-400">
                       <div className="flex justify-between">
-                        <span>Active Concurrency Load:</span>
-                        <span className="text-slate-350 font-semibold">{worker.activeJobs} / {worker.capacity}</span>
+                        <span>Worker ID:</span>
+                        <span className="text-slate-200">{worker.id.slice(0, 8)}...</span>
                       </div>
-                    )}
+                      <div className="flex justify-between">
+                        <span>Capacity:</span>
+                        <span className="text-slate-200">{worker.capacity} concurrency</span>
+                      </div>
+                      {worker.activeJobs !== undefined && (
+                        <div className="flex justify-between">
+                          <span>Active Load:</span>
+                          <span className="text-slate-200">{worker.activeJobs} / {worker.capacity}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-[8px] font-mono text-slate-500 mt-4 border-t border-[#1F2430] pt-2 flex justify-between">
+                    <span>Last heartbeat:</span>
+                    <span>{new Date(worker.lastHeartbeatAt).toLocaleTimeString()}</span>
                   </div>
                 </div>
-
-                <div className="text-[8px] text-slate-500 mt-4 border-t border-slate-850/50 pt-2 flex justify-between">
-                  <span>Last Heartbeat:</span>
-                  <span>{new Date(worker.lastHeartbeatAt).toLocaleTimeString()}</span>
-                </div>
-              </div>
-            ))}
+              )
+            })}
           </div>
         )}
       </div>

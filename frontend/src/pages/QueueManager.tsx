@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 
 interface QueueManagerProps {
   token: string
@@ -175,113 +175,100 @@ export default function QueueManager({ token, projectId }: QueueManagerProps) {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 space-y-4">
-        <span className="w-12 h-12 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
-        <p className="text-slate-400 text-sm">Loading queue configurations...</p>
+      <div className="flex flex-col items-center justify-center py-20 space-y-4 font-mono">
+        <span className="w-6 h-6 border-2 border-purple-500/20 border-t-purple-500 rounded-full animate-spin" />
+        <p className="text-slate-500 text-xs">RETRIEVING_QUEUE_CONFIGS...</p>
       </div>
     )
   }
 
   if (error) {
     return (
-      <div className="max-w-xl mx-auto my-10 bg-red-950/20 border border-red-500/20 rounded-xl p-6 text-center">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-red-500/10 text-red-400 mb-4">
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
+      <div className="max-w-xl mx-auto my-10 bg-[#12151C] border border-red-950/80 rounded p-5 font-mono">
+        <div className="flex items-center space-x-2 text-red-450 text-sm font-semibold mb-2">
+          <span>[SYS_ERROR]</span>
         </div>
-        <h3 className="text-lg font-semibold text-red-200 mb-2">Failed to Load Queues</h3>
-        <p className="text-sm text-red-300/80 mb-6">{error}</p>
+        <p className="text-xs text-slate-550 mb-6">{error}</p>
         <button
           onClick={fetchData}
-          className="bg-red-500/20 hover:bg-red-500/30 text-red-200 border border-red-500/40 font-medium px-4 py-2 rounded-lg transition-colors"
+          className="bg-[#0B0D12] hover:bg-[#12151C] text-slate-300 border border-[#1F2430] text-xs font-semibold px-4 py-2 rounded transition-colors cursor-pointer"
         >
-          Try Again
+          RETRY_FETCH
         </button>
       </div>
     )
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-sans">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-xl font-bold text-slate-100">Queue Management</h2>
-          <p className="text-slate-400 text-sm">Configure concurrency limits, priorities, and retry paths.</p>
+          <h2 className="text-sm font-bold text-slate-200 uppercase tracking-widest font-mono">Queue Configurations</h2>
+          <p className="text-slate-550 text-[10px] font-mono">Define queue-level priority parameters, concurrency pools, and retry paths.</p>
         </div>
         <button
           onClick={() => setIsCreating(true)}
-          className="bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors flex items-center space-x-2"
+          className="bg-purple-600/10 hover:bg-purple-600/20 active:bg-purple-600/35 border border-purple-500/40 text-purple-300 text-xs font-semibold px-3 py-1.5 rounded transition-colors font-mono cursor-pointer"
         >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4v16m8-8H4" />
-          </svg>
-          <span>Create Queue</span>
+          CREATE_QUEUE
         </button>
       </div>
 
       {queues.length === 0 ? (
-        <div className="bg-slate-900/25 border border-slate-800/80 rounded-xl p-12 text-center">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-slate-800 text-slate-400 mb-4">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-            </svg>
-          </div>
-          <h3 className="text-lg font-semibold text-slate-300 mb-1">No Queues Configured</h3>
-          <p className="text-sm text-slate-500 mb-6">Create a queue to start distributing jobs across workers.</p>
+        <div className="bg-[#12151C] border border-[#1F2430] rounded p-12 text-center text-slate-500 font-mono">
+          <h3 className="text-xs font-bold text-slate-400 mb-1">NO_QUEUES_CONFIGURED</h3>
+          <p className="text-[10px] text-slate-600 mb-6">Create a queue schema definition to route job tasks.</p>
           <button
             onClick={() => setIsCreating(true)}
-            className="bg-slate-800 hover:bg-slate-750 text-slate-200 border border-slate-700 font-medium px-4 py-2 rounded-lg transition-colors"
+            className="bg-[#0B0D12] hover:bg-[#12151C] text-slate-350 border border-[#1F2430] text-xs font-semibold px-4 py-2 rounded transition-colors cursor-pointer"
           >
-            Configure First Queue
+            CONFIGURE_INITIAL_QUEUE
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 font-mono text-xs">
           {queues.map((queue) => (
             <div
               key={queue.id}
-              className={`bg-slate-900/30 border rounded-xl p-6 relative overflow-hidden transition-all duration-200 ${queue.status === 'PAUSED' ? 'border-amber-500/20 bg-amber-950/5' : 'border-slate-800/80 hover:border-slate-700'}`}
+              className={`bg-[#12151C] border rounded p-5 relative overflow-hidden transition-all duration-200 ${queue.status === 'PAUSED' ? 'border-amber-500/30' : 'border-[#1F2430] hover:border-slate-700'}`}
             >
               {/* Active/Paused indicator tag */}
-              <div className="absolute top-0 right-0 p-4">
-                <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold uppercase tracking-wider ${queue.status === 'PAUSED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
+              <div className="absolute top-0 right-0 p-3">
+                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider ${queue.status === 'PAUSED' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'bg-green-500/10 text-green-400 border border-green-500/20'}`}>
                   {queue.status}
                 </span>
               </div>
 
-              <h3 className="text-lg font-bold text-slate-100 mb-1 pr-16 truncate">{queue.name}</h3>
-              <p className="text-xs text-slate-500 mb-6">ID: {queue.id}</p>
+              <h3 className="font-bold text-slate-200 text-sm mb-1 pr-16 truncate">{queue.name}</h3>
+              <p className="text-[8px] text-slate-500 mb-5">ID: {queue.id}</p>
 
-              <div className="space-y-4 mb-6 text-sm">
-                <div className="flex justify-between border-b border-slate-850 pb-2">
-                  <span className="text-slate-400">Priority Level</span>
-                  <span className="font-semibold text-slate-200">{queue.priority}</span>
+              <div className="space-y-2 mb-6 text-[10px] text-slate-400 border-t border-[#1F2430] pt-3">
+                <div className="flex justify-between border-b border-[#1F2430]/40 pb-1.5">
+                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[8px]">Priority</span>
+                  <span className="text-slate-200">{queue.priority}</span>
                 </div>
-                <div className="flex justify-between border-b border-slate-850 pb-2">
-                  <span className="text-slate-400">Concurrency Capacity</span>
-                  <span className="font-semibold text-slate-200">{queue.concurrencyLimit} active jobs</span>
+                <div className="flex justify-between border-b border-[#1F2430]/40 pb-1.5">
+                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[8px]">Max Concurrency</span>
+                  <span className="text-slate-200">{queue.concurrencyLimit} tasks</span>
                 </div>
-                <div className="flex justify-between border-b border-slate-850 pb-2">
-                  <span className="text-slate-400">Retry Backoff Strategy</span>
-                  <span className="font-semibold text-purple-400" title={`Base Delay: ${queue.retryPolicy.baseDelay}s, Max Retries: ${queue.retryPolicy.maxRetries}`}>
-                    {queue.retryPolicy.name}
-                  </span>
+                <div className="flex justify-between pb-0.5">
+                  <span className="text-slate-500 font-bold uppercase tracking-wider text-[8px]">Backoff Strategy</span>
+                  <span className="text-purple-400 truncate max-w-[120px]">{queue.retryPolicy.name}</span>
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3 pt-2">
+              <div className="grid grid-cols-2 gap-3">
                 <button
                   onClick={() => handleToggleStatus(queue)}
-                  className={`text-xs font-medium py-2 rounded-lg border transition-all ${queue.status === 'PAUSED' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-slate-950/40 hover:bg-slate-900 border-slate-800 text-slate-300'}`}
+                  className={`text-[9px] font-bold py-1.5 rounded border transition-all cursor-pointer ${queue.status === 'PAUSED' ? 'bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border-amber-500/30' : 'bg-[#0B0D12] hover:bg-[#12151C] border-[#1F2430] text-slate-350'}`}
                 >
-                  {queue.status === 'ACTIVE' ? 'Pause Queue' : 'Resume Queue'}
+                  {queue.status === 'ACTIVE' ? 'PAUSE' : 'RESUME'}
                 </button>
                 <button
                   onClick={() => handleOpenEdit(queue)}
-                  className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 text-purple-300 text-xs font-medium py-2 rounded-lg transition-all"
+                  className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/30 text-purple-300 text-[9px] font-bold py-1.5 rounded transition-all cursor-pointer"
                 >
-                  Edit Config
+                  EDIT_CONFIG
                 </button>
               </div>
             </div>
@@ -291,25 +278,25 @@ export default function QueueManager({ token, projectId }: QueueManagerProps) {
 
       {/* CREATE QUEUE MODAL */}
       {isCreating && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl relative">
-            <h3 className="text-lg font-bold text-slate-100 mb-4">Create Queue</h3>
+        <div className="fixed inset-0 bg-[#0B0D12]/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#12151C] border border-[#1F2430] rounded p-5 shadow-2xl relative font-mono text-xs">
+            <h3 className="font-bold text-slate-200 mb-4 uppercase text-center tracking-wider">Create Queue Config</h3>
             <form onSubmit={handleCreateQueue} className="space-y-4">
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Queue Name</label>
+                <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Queue Identifier</label>
                 <input
                   type="text"
                   required
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-purple-500"
-                  placeholder="image-resizing"
+                  className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
+                  placeholder="image-processing"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Priority (1-10)</label>
+                  <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Priority (1-10)</label>
                   <input
                     type="number"
                     min="1"
@@ -317,51 +304,51 @@ export default function QueueManager({ token, projectId }: QueueManagerProps) {
                     required
                     value={newPriority}
                     onChange={(e) => setNewPriority(parseInt(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                    className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Concurrency Limit</label>
+                  <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Max Concurrency</label>
                   <input
                     type="number"
                     min="1"
                     required
                     value={newConcurrency}
                     onChange={(e) => setNewConcurrency(parseInt(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                    className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Retry Policy</label>
+                <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Retry Backoff Policy</label>
                 <select
                   value={newPolicyId}
                   onChange={(e) => setNewPolicyId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-855 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                  className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer"
                 >
                   {policies.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.strategy})
+                      {p.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-[#1F2430]/60 mt-6">
                 <button
                   type="button"
                   onClick={() => setIsCreating(false)}
-                  className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 px-4 py-2 rounded-lg text-sm transition-colors"
+                  className="bg-[#0B0D12] hover:bg-[#12151C] border border-[#1F2430] text-slate-400 px-3.5 py-1.5 rounded transition-colors cursor-pointer"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-purple-600 hover:bg-purple-500 active:bg-purple-750 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/40 text-purple-300 px-4 py-1.5 rounded font-bold transition-colors cursor-pointer"
                 >
-                  {saving ? 'Creating...' : 'Create'}
+                  {saving ? 'CREATING...' : 'SUBMIT'}
                 </button>
               </div>
             </form>
@@ -371,14 +358,14 @@ export default function QueueManager({ token, projectId }: QueueManagerProps) {
 
       {/* EDIT QUEUE CONFIG MODAL */}
       {editingQueue && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-slate-900 border border-slate-800 rounded-xl p-6 shadow-2xl relative">
-            <h3 className="text-lg font-bold text-slate-100 mb-1">Edit Queue Config</h3>
-            <p className="text-xs text-slate-400 mb-4">Editing queue: {editingQueue.name}</p>
+        <div className="fixed inset-0 bg-[#0B0D12]/75 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="w-full max-w-sm bg-[#12151C] border border-[#1F2430] rounded p-5 shadow-2xl relative font-mono text-xs">
+            <h3 className="font-bold text-slate-200 mb-1 uppercase tracking-wider text-center">Edit Queue Config</h3>
+            <p className="text-[9px] text-slate-550 mb-4 text-center">Queue: {editingQueue.name}</p>
             <form onSubmit={handleSaveEdit} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Priority (1-10)</label>
+                  <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Priority (1-10)</label>
                   <input
                     type="number"
                     min="1"
@@ -386,63 +373,63 @@ export default function QueueManager({ token, projectId }: QueueManagerProps) {
                     required
                     value={priority}
                     onChange={(e) => setPriority(parseInt(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                    className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Concurrency Limit</label>
+                  <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Max Concurrency</label>
                   <input
                     type="number"
                     min="1"
                     required
                     value={concurrency}
                     onChange={(e) => setConcurrency(parseInt(e.target.value))}
-                    className="w-full bg-slate-950 border border-slate-850 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                    className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Retry Policy</label>
+                <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Retry Backoff Policy</label>
                 <select
                   value={policyId}
                   onChange={(e) => setPolicyId(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-855 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                  className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer"
                 >
                   {policies.map((p) => (
                     <option key={p.id} value={p.id}>
-                      {p.name} ({p.strategy})
+                      {p.name}
                     </option>
                   ))}
                 </select>
               </div>
 
               <div>
-                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1">Queue Status</label>
+                <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1">Queue Status</label>
                 <select
                   value={queueStatus}
                   onChange={(e) => setQueueStatus(e.target.value)}
-                  className="w-full bg-slate-950 border border-slate-855 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none"
+                  className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-3 py-1.5 text-xs text-slate-300 focus:outline-none cursor-pointer"
                 >
                   <option value="ACTIVE">ACTIVE</option>
                   <option value="PAUSED">PAUSED</option>
                 </select>
               </div>
 
-              <div className="flex justify-end space-x-3 pt-4">
+              <div className="flex justify-end space-x-3 pt-3 border-t border-[#1F2430]/60 mt-6 font-mono">
                 <button
                   type="button"
                   onClick={() => setEditingQueue(null)}
-                  className="bg-slate-950 hover:bg-slate-900 border border-slate-800 text-slate-400 px-4 py-2 rounded-lg text-sm transition-colors"
+                  className="bg-[#0B0D12] hover:bg-[#12151C] border border-[#1F2430] text-slate-400 px-3.5 py-1.5 rounded transition-colors cursor-pointer"
                 >
-                  Cancel
+                  CANCEL
                 </button>
                 <button
                   type="submit"
                   disabled={saving}
-                  className="bg-purple-600 hover:bg-purple-500 active:bg-purple-750 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+                  className="bg-purple-600/10 hover:bg-purple-600/20 border border-purple-500/40 text-purple-300 px-4 py-1.5 rounded font-bold transition-colors cursor-pointer"
                 >
-                  {saving ? 'Saving...' : 'Save Changes'}
+                  {saving ? 'SAVING...' : 'SAVE_CHANGES'}
                 </button>
               </div>
             </form>

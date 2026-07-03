@@ -134,4 +134,71 @@ describe('API Auth, Projects & Jobs Endpoints', () => {
     expect(res2.body.job.id).toBe(jobId)
     expect(res2.headers['x-cache-lookup']).toContain('HIT')
   })
+
+  it('should retrieve list of workers via GET /api/workers', async () => {
+    const worker = await prisma.worker.create({
+      data: {
+        name: 'test-api-worker-' + Date.now(),
+        status: 'ACTIVE',
+        capacity: 10,
+        lastHeartbeatAt: new Date()
+      }
+    })
+
+    const res = await request(app)
+      .get('/api/workers')
+      .set('Authorization', `Bearer ${userToken}`)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('workers')
+    expect(Array.isArray(res.body.workers)).toBe(true)
+    expect(res.body.workers.some((w: any) => w.id === worker.id)).toBe(true)
+  })
+
+  it('should verify job status queries representing Queue Depth categories', async () => {
+    const j1 = await prisma.job.create({
+      data: {
+        projectId,
+        queueId,
+        status: 'QUEUED',
+        payload: {},
+        correlationId: 'depth-test-1'
+      }
+    })
+    const j2 = await prisma.job.create({
+      data: {
+        projectId,
+        queueId,
+        status: 'RUNNING',
+        payload: {},
+        correlationId: 'depth-test-2'
+      }
+    })
+    const j3 = await prisma.job.create({
+      data: {
+        projectId,
+        queueId,
+        status: 'CLAIMED',
+        payload: {},
+        correlationId: 'depth-test-3'
+      }
+    })
+
+    const res = await request(app)
+      .get(`/api/projects/${projectId}/jobs`)
+      .set('Authorization', `Bearer ${userToken}`)
+
+    expect(res.status).toBe(200)
+    expect(res.body).toHaveProperty('jobs')
+    const jobIds = res.body.jobs.map((j: any) => j.id)
+    expect(jobIds).toContain(j1.id)
+    expect(jobIds).toContain(j2.id)
+    expect(jobIds).toContain(j3.id)
+    
+    const targetJobs = res.body.jobs.filter((j: any) => [j1.id, j2.id, j3.id].includes(j.id))
+    const statuses = targetJobs.map((j: any) => j.status)
+    expect(statuses).toContain('QUEUED')
+    expect(statuses).toContain('RUNNING')
+    expect(statuses).toContain('CLAIMED')
+  })
 })
