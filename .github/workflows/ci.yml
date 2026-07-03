@@ -56,6 +56,10 @@ jobs:
           echo "JWT_SECRET=super-secret-key-change-it-in-production" >> .env
           echo "NODE_ENV=test" >> .env
           echo "PORT=3001" >> .env
+          # Also write to prisma/.env — Prisma Client resolves .env relative to schema.prisma
+          # location (prisma/), not the project root. The seed script runs from prisma/ via
+          # 'npm run seed -w prisma', so PrismaClient looks for prisma/.env first.
+          cp .env prisma/.env
 
       - name: Build Database Client
         run: npm run build -w prisma
