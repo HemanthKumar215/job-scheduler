@@ -3,7 +3,7 @@ import { JobStatus } from 'db-client'
 const VALID_TRANSITIONS: Record<JobStatus, JobStatus[]> = {
   [JobStatus.QUEUED]: [JobStatus.CLAIMED],
   [JobStatus.CLAIMED]: [JobStatus.RUNNING, JobStatus.QUEUED, JobStatus.FAILED],
-  [JobStatus.RUNNING]: [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.QUEUED],
+  [JobStatus.RUNNING]: [JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.QUEUED, JobStatus.DLQ],
   [JobStatus.COMPLETED]: [JobStatus.QUEUED], // Can reset for manual rerun
   [JobStatus.FAILED]: [JobStatus.QUEUED, JobStatus.DLQ],
   [JobStatus.DLQ]: [JobStatus.QUEUED]
