@@ -201,4 +201,40 @@ describe('API Auth, Projects & Jobs Endpoints', () => {
     expect(statuses).toContain('RUNNING')
     expect(statuses).toContain('CLAIMED')
   })
+
+  it('should support optional job user assignment and filtering by userId', async () => {
+    // 1. Fetch user to assign
+    const user = await prisma.user.findFirst()
+    expect(user).toBeDefined()
+    const targetUserId = user!.id
+
+    // 2. Submit job assigned to user
+    const resSubmit = await request(app)
+      .post(`/api/projects/${projectId}/jobs`)
+      .set('Authorization', `Bearer ${userToken}`)
+      .send({
+        queueId,
+        payload: { task: 'assigned-user-test-job' },
+        userId: targetUserId
+      })
+
+    expect(resSubmit.status).toBe(201)
+    expect(resSubmit.body.job.userId).toBe(targetUserId)
+
+    const assignedJobId = resSubmit.body.job.id
+
+    // 3. Retrieve list and verify it is returned with user details
+    const resList = await request(app)
+      .get(`/api/projects/${projectId}/jobs?userId=${targetUserId}`)
+      .set('Authorization', `Bearer ${userToken}`)
+
+    expect(resList.status).toBe(200)
+    const listJobIds = resList.body.jobs.map((j: any) => j.id)
+    expect(listJobIds).toContain(assignedJobId)
+
+    const foundJob = resList.body.jobs.find((j: any) => j.id === assignedJobId)
+    expect(foundJob.user).toBeDefined()
+    expect(foundJob.user.id).toBe(targetUserId)
+    expect(foundJob.user.email).toBe(user!.email)
+  })
 })

@@ -131,6 +131,7 @@ async function main() {
       priority: 5,
       projectId: project.id,
       queueId: defaultQueue.id,
+      userId: user.id,
       correlationId: 'seed-correlation-id',
       scheduledAt: new Date()
     }

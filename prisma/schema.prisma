@@ -55,6 +55,7 @@ model User {
   createdAt    DateTime             @default(now())
   updatedAt    DateTime             @updatedAt
   memberships  OrganizationMember[]
+  jobs         Job[]
 }
 
 model Organization {
@@ -128,6 +129,7 @@ model Job {
   priority       Int            @default(1)
   projectId      String
   queueId        String
+  userId         String?
   scheduledAt    DateTime       @default(now())
   cronExpression String?
   attemptCount   Int            @default(0)
@@ -138,6 +140,7 @@ model Job {
   updatedAt      DateTime       @updatedAt
   project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
   queue          Queue          @relation(fields: [queueId], references: [id], onDelete: Cascade)
+  user           User?          @relation(fields: [userId], references: [id], onDelete: SetNull)
   executions     JobExecution[]
   dlqEntries     DeadLetterQueue[]
 

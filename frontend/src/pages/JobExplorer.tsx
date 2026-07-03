@@ -17,6 +17,7 @@ interface Job {
   attemptCount: number
   batchId: string | null
   correlationId: string
+  user?: { id: string; firstName: string; lastName: string; email: string } | null
   createdAt: string
   updatedAt: string
 }
@@ -39,8 +40,12 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
   const [queueFilter, setQueueFilter] = useState('')
   const [batchFilter, setBatchFilter] = useState('')
   const [correlationFilter, setCorrelationFilter] = useState('')
+  const [userFilter, setUserFilter] = useState('')
   const [dateStart, setDateStart] = useState('')
   const [dateEnd, setDateEnd] = useState('')
+
+  // Workspace Members list
+  const [members, setMembers] = useState<any[]>([])
 
   // Pagination
   const [page, setPage] = useState(1)
@@ -68,6 +73,27 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
     if (projectId) fetchQueues()
   }, [projectId])
 
+  // Fetch organization members to populate user filters
+  useEffect(() => {
+    const fetchMembers = async () => {
+      try {
+        const memberships = JSON.parse(localStorage.getItem('memberships') || '[]')
+        const membership = memberships.find((m: any) =>
+          m.organization.projects.some((p: any) => p.id === projectId)
+        )
+        const orgId = membership?.organizationId || membership?.organization?.id
+        if (!orgId) return
+
+        const res = await fetch(`http://localhost:3000/api/organizations/${orgId}/members`, {
+          headers: { Authorization: `Bearer ${token}` }
+        })
+        const data = await res.json()
+        if (res.ok) setMembers(data.members)
+      } catch (err) {}
+    }
+    if (projectId) fetchMembers()
+  }, [projectId])
+
   // Fetch Jobs List
   const fetchJobs = async () => {
     setLoading(true)
@@ -78,6 +104,7 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
       if (queueFilter) queryStr += `&queueId=${queueFilter}`
       if (batchFilter) queryStr += `&batchId=${batchFilter}`
       if (correlationFilter) queryStr += `&correlationId=${correlationFilter}`
+      if (userFilter) queryStr += `&userId=${userFilter}`
       if (dateStart) queryStr += `&dateRangeStart=${dateStart}`
       if (dateEnd) queryStr += `&dateRangeEnd=${dateEnd}`
 
@@ -100,7 +127,7 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
     if (projectId) {
       fetchJobs()
     }
-  }, [projectId, page, statusFilter, queueFilter, dateStart, dateEnd])
+  }, [projectId, page, statusFilter, queueFilter, userFilter, dateStart, dateEnd])
 
   const handleSearchClick = (e: React.FormEvent) => {
     e.preventDefault()
@@ -199,7 +226,7 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
       </div>
 
       {/* Filter Bar Form */}
-      <form onSubmit={handleSearchClick} className="bg-[#12151C] border border-[#1F2430] rounded p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-3 items-end">
+      <form onSubmit={handleSearchClick} className="bg-[#12151C] border border-[#1F2430] rounded p-4 grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-3 items-end">
         <div>
           <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Queue</label>
           <select
@@ -251,6 +278,22 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
             placeholder="Search correlation..."
             className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-2.5 py-1 text-xs text-slate-355 focus:outline-none font-mono"
           />
+        </div>
+
+        <div>
+          <label className="block text-[8px] font-bold text-slate-500 uppercase tracking-wider mb-1 font-mono">Assigned To</label>
+          <select
+            value={userFilter}
+            onChange={(e) => setUserFilter(e.target.value)}
+            className="w-full bg-[#0B0D12] border border-[#1F2430] rounded px-2.5 py-1 text-xs text-slate-350 focus:outline-none font-mono cursor-pointer"
+          >
+            <option value="">All Users</option>
+            {members.map(m => (
+              <option key={m.user.id} value={m.user.id}>
+                {m.user.firstName} {m.user.lastName[0]}.
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
@@ -313,6 +356,7 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
                       <th className="p-2.5">Status</th>
                       <th className="p-2.5">Priority</th>
                       <th className="p-2.5">Attempts</th>
+                      <th className="p-2.5">Assigned To</th>
                       <th className="p-2.5">Created At</th>
                     </tr>
                   </thead>
@@ -334,6 +378,7 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
                         </td>
                         <td className="p-2.5 text-slate-350">{job.priority}</td>
                         <td className="p-2.5 text-slate-400">{job.attemptCount}</td>
+                        <td className="p-2.5 text-slate-400">{job.user ? `${job.user.firstName} ${job.user.lastName[0]}.` : '—'}</td>
                         <td className="p-2.5 text-slate-550">{new Date(job.createdAt).toLocaleString()}</td>
                       </tr>
                     ))}
@@ -453,6 +498,10 @@ export default function JobExplorer({ token, projectId }: JobExplorerProps) {
                 <div className="flex justify-between">
                   <span className="text-slate-550">Attempts Count:</span>
                   <span className="text-slate-300">{selectedJob.attemptCount} / {selectedJob.queue?.retryPolicy?.maxRetries || 5}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-550">Assigned To:</span>
+                  <span className="text-slate-300 font-semibold">{selectedJob.user ? `${selectedJob.user.firstName} ${selectedJob.user.lastName} (${selectedJob.user.email})` : 'Unassigned'}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-550">Scheduled run:</span>

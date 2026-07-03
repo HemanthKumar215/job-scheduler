@@ -15,7 +15,8 @@ const createJobSchema = z.object({
   priority: z.number().int().min(1).optional(),
   scheduledAt: z.string().optional(),
   cronExpression: z.string().optional(),
-  batchId: z.string().optional()
+  batchId: z.string().optional(),
+  userId: z.string().uuid().optional()
 })
 
 const getJobsQuerySchema = z.object({
@@ -23,6 +24,7 @@ const getJobsQuerySchema = z.object({
   queueId: z.string().uuid().optional(),
   batchId: z.string().optional(),
   correlationId: z.string().optional(),
+  userId: z.string().uuid().optional(),
   dateRangeStart: z.string().optional(),
   dateRangeEnd: z.string().optional(),
   page: z.string().regex(/^\d+$/).transform(Number).default('1'),
@@ -51,6 +53,21 @@ router.post(
             message: 'Target Queue not found in this project.'
           }
         })
+      }
+
+      // Validate assigned user exists if provided
+      if (body.userId) {
+        const userExists = await prisma.user.findUnique({
+          where: { id: body.userId }
+        })
+        if (!userExists) {
+          return res.status(400).json({
+            error: {
+              code: 'VALIDATION_ERROR',
+              message: 'Assigned User does not exist.'
+            }
+          })
+        }
       }
 
       // Validate cron expression if provided
@@ -97,6 +114,7 @@ router.post(
           scheduledAt,
           cronExpression: body.cronExpression || null,
           batchId: body.batchId || null,
+          userId: body.userId || null,
           idempotencyKey: idempotencyKey || null,
           correlationId
         }
@@ -136,6 +154,7 @@ router.get(
     if (query.queueId) where.queueId = query.queueId
     if (query.batchId) where.batchId = query.batchId
     if (query.correlationId) where.correlationId = query.correlationId
+    if (query.userId) where.userId = query.userId
 
     if (query.dateRangeStart || query.dateRangeEnd) {
       where.createdAt = {}
@@ -151,7 +170,10 @@ router.get(
         orderBy: { createdAt: 'desc' },
         skip,
         take: query.limit,
-        include: { queue: { select: { name: true } } }
+        include: {
+          queue: { select: { name: true } },
+          user: { select: { id: true, firstName: true, lastName: true, email: true } }
+        }
       }),
       prisma.job.count({ where })
     ])
@@ -227,6 +249,7 @@ router.get(
       where: { id: jobId },
       include: {
         queue: { select: { name: true } },
+        user: { select: { id: true, firstName: true, lastName: true, email: true } },
         executions: { orderBy: { startedAt: 'desc' } },
         dlqEntries: true
       }
