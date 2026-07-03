@@ -6,6 +6,16 @@ on:
   pull_request:
     branches: [ main, master ]
 
+env:
+  # Define connection strings once at workflow level — all steps inherit these.
+  # Using actual env vars (not .env file) avoids all dotenv path-resolution issues:
+  # Prisma CLI, PrismaClient in tsx scripts, and test runners all read process.env directly.
+  DATABASE_URL: postgresql://postgres:password@localhost:5432/job_scheduler?schema=public
+  REDIS_URL: redis://localhost:6379
+  JWT_SECRET: super-secret-key-change-it-in-production
+  NODE_ENV: test
+  PORT: 3001
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -48,41 +58,22 @@ jobs:
       - name: Install Dependencies
         run: npm install --legacy-peer-deps
 
-      - name: Create .env Configuration
-        run: |
-          # No quotes around values — Prisma parses the raw string
-          echo "DATABASE_URL=postgresql://postgres:password@localhost:5432/job_scheduler?schema=public" > .env
-          echo "REDIS_URL=redis://localhost:6379" >> .env
-          echo "JWT_SECRET=super-secret-key-change-it-in-production" >> .env
-          echo "NODE_ENV=test" >> .env
-          echo "PORT=3001" >> .env
-          # Also write to prisma/.env — Prisma Client resolves .env relative to schema.prisma
-          # location (prisma/), not the project root. The seed script runs from prisma/ via
-          # 'npm run seed -w prisma', so PrismaClient looks for prisma/.env first.
-          cp .env prisma/.env
-
       - name: Build Database Client
         run: npm run build -w prisma
 
       - name: Run Database Migrations
         # 'migrate deploy' applies committed migration files — no interactive prompts.
-        # Run from the prisma workspace dir so the schema.prisma path resolves correctly.
+        # 'migrate dev' is interactive and fails in CI (no TTY). Never use it here.
         run: npx prisma migrate deploy --schema=prisma/schema.prisma
 
       - name: Seed Database
-        # Must use the workspace script (npm run seed -w prisma), NOT npx tsx prisma/seed.ts
-        # from root. Reason: tsx and @prisma/client are devDeps of the prisma workspace;
-        # running tsx from root can't resolve them, and relative imports inside seed.ts
-        # (e.g. bcrypt) would also fail. The workspace script runs in the correct cwd.
+        # Uses 'npm run seed -w prisma' which runs 'tsx seed.ts' from the prisma/ dir.
+        # seed.ts has 'import dotenv/config' but DATABASE_URL is also set at workflow level
+        # so PrismaClient gets it from process.env regardless of .env file discovery.
         run: npm run seed -w prisma
 
       - name: Run Standard Tests
         run: npm run test
-        env:
-          NODE_ENV: test
-          PORT: 3001
 
       - name: Run Concurrency & Failover Proof Tests
         run: npm run test:proofs
-        env:
-          NODE_ENV: test
